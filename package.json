@@ -4,9 +4,9 @@
   "description": "Assorted Parseq-style requestors",
   "main": "index.js",
   "dependencies": {
-    "@jlrwi/combinators": "file:..\\combinators",
-    "@jlrwi/esfunctions": "file:..\\esfunctions",
-    "@jlrwi/parseq": "file:..\\parseq"
+    "@jlrwi/combinators": "file:../combinators",
+    "@jlrwi/esfunctions": "file:../esfunctions",
+    "@jlrwi/parseq": "file:../parseq"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -3,14 +3,17 @@
 */
 
 import {
-    compose
+    pipe
 } from "@jlrwi/combinators";
 import {
     is_object,
     array_map,
     object_map,
     prop,
-    type_check
+    type_check,
+    minimal_object,
+    functional_if,
+    equals
 } from "@jlrwi/esfunctions";
 import parseq from "@jlrwi/parseq";
 
@@ -78,10 +81,11 @@ const wait_requestor = function (callback) {
 
             if (result === true) {
                 clearInterval(timer);
-                if (limit) {
-                    clearTimeout(limit);
-                }
                 timer = undefined;
+                if (limit !== undefined) {
+                    clearTimeout(limit);
+                    limit = undefined;
+                }
                 callback(
                     (type_check ("function") (value))
                     ? value ()
@@ -92,6 +96,7 @@ const wait_requestor = function (callback) {
 
         const timeout_callback = function () {
             clearInterval(timer);
+            timer = undefined;
             timeout = undefined;
             limit = undefined;
             callback(undefined, "Timeout exceeded");
@@ -108,31 +113,56 @@ const wait_requestor = function (callback) {
         }
 
         return function () {
-            clearInterval(timer);
+            if (limit !== undefined) {
+                clearTimeout(limit);
+            }
+
+            if (timeout !== undefined) {
+                clearInterval(timer);
+            }
         };
     };
 };
 
 // Take an object of requestors and send them the matching properties from the
 // input object
-const record_requestor = function (requestors) {
+const record_requestor = function (options = {}) {
+    return function (requestors) {
 
-    if (!is_object(requestors)) {
-        throw "Invalid requestors object.";
-    }
-
-    const requestor_list = Object.keys(requestors).map(
-        function (key) {
-            return [
-                key,
-                function requestor (callback) {
-                    return compose (requestors[key](callback)) (prop (key));
-                }
-            ];
+        if (!is_object(requestors)) {
+            throw "Invalid requestors object.";
         }
-    );
 
-    return parseq.parallel_object () (Object.fromEntries(requestor_list));
+// Turn each key/requestor in the object of requestors into [key, requestor]
+// With the corresponding val from input piped into each requestor
+        const requestor_list = Object.keys(requestors).map(
+            function (key) {
+                return [
+                    key,
+                    function requestor (callback) {
+                        return pipe (
+                            prop(key)
+                        ) (
+                            functional_if (
+                                equals(undefined)
+                            ) (
+// When the input is missing a key, return {}
+                                constant_requestor(minimal_object())(callback),
+// Otherwise call the requestor
+                                requestors[key](callback)
+                            )
+                        );
+                    }
+                ];
+            }
+        );
+
+        return parseq.parallel_object (
+            options
+        ) (
+            Object.fromEntries(requestor_list)
+        );
+    };
 };
 
 // Take a requestor and input value, and return a requestor that takes a
@@ -152,7 +182,7 @@ const preloaded_requestor = function (requestor) {
 const applied_requestor = function (processor) {
     return function (options = {}) {
         return function (requestor) {
-            return function applied_requestor(final_callback) {
+            return function applied_requestor (final_callback) {
                 return function (input_list) {
 
                     if (!Array.isArray(input_list)) {
@@ -185,7 +215,7 @@ const applied_parallel_requestor = applied_requestor(parseq.parallel);
 const applied_fallback_requestor = applied_requestor(parseq.fallback);
 
 // Produce the applied parallel object factory
-// Result: <a -> b> -> {a} -> [<a -> b>] -> {b}
+// Result: <a -> b> -> {a} -> {<a -> b>} -> {b}
 const applied_parallel_object_requestor = function (options = {}) {
     return function (requestor) {
         return function applied_requestor(final_callback) {
@@ -269,7 +299,7 @@ const chained_requestor = function ({continuer, aggregator}) {
                     const result = aggregator (initial_value) (value);
 
                     const f = (
-                        continuer(result)
+                        (continuer(result))
                         ? chained_requestor (
                             {continuer, aggregator}
                         ) (
