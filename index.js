@@ -3,7 +3,9 @@
 */
 
 import {
-    pipe
+    pipe,
+    identity,
+    pipeN
 } from "@jlrwi/combinators";
 import {
     is_object,
@@ -16,14 +18,18 @@ import {
     equals
 } from "@jlrwi/esfunctions";
 import parseq from "@jlrwi/parseq";
+import requestor_type from "@jlrwi/requestor_type";
 
+const req_type = requestor_type();
+
+// Turn a non-blocking unary function into a requestor
 const unary_requestor = function (unary_fx) {
-    return function unary_requestor (callback) {
+    return function unary_requestor(callback) {
         return function (value) {
             try {
-                callback (unary_fx (value));
-            } catch (err) {
-                callback (undefined, err.message);
+                callback(unary_fx(value));
+            } catch (exception) {
+                callback(undefined, exception.message);
             }
         };
     };
@@ -31,16 +37,16 @@ const unary_requestor = function (unary_fx) {
 
 // Can be used to insert a value into a sequence of requestors
 const constant_requestor = function (constant_value) {
-    return function constant_requestor (callback) {
+    return function constant_requestor(callback) {
         return function (ignore) {
-            return callback (constant_value);
+            callback(constant_value);
         };
     };
 };
 
 // Convert a promise to a requestor
 const promise_requestor = function (promise_object) {
-    return function promise_requestor (callback) {
+    return function promise_requestor(callback) {
         const on_err = function (err) {
             return callback(undefined, err.message);
         };
@@ -51,27 +57,32 @@ const promise_requestor = function (promise_object) {
     };
 };
 
-const functional_callback = function (on_success) {
-    return function (on_fail) {
-        return function callback (value, reason) {
+// Return a generic callback function using on_success and on_fail functions
+// Reversed parameter order in 2.0.0
+const functional_callback = function (on_fail) {
+    return function (on_success) {
+        return function callback(value, reason) {
             if (value === undefined) {
-                on_fail (reason);
+                on_fail(reason);
             } else {
-                on_success (value);
+                on_success(value);
             }
         };
     };
 };
 
+// Requestor to wait for a predicate function to return true
 const wait_requestor = function (callback) {
     return function ({predicate, args, interval, timeout, value}) {
         let timer;
         let limit;
 
+// Can't return an undefined value from a requestor - use a timestamp
         if (value === undefined) {
             value = Date.now;
         }
 
+// Check the predicate
         const tester = function () {
             const result = (
                 (Array.isArray(args))
@@ -80,31 +91,43 @@ const wait_requestor = function (callback) {
             );
 
             if (result === true) {
-                clearInterval(timer);
-                timer = undefined;
+
+// Shut down any timeout timer
                 if (limit !== undefined) {
                     clearTimeout(limit);
                     limit = undefined;
                 }
+
+// Shut down the interval timer
+                clearInterval(timer);
+                timer = undefined;
+
+// Return the value to the callback
                 callback(
-                    (type_check ("function") (value))
-                    ? value ()
+                    (type_check("function")(value))
+                    ? value()
                     : value
                 );
             }
         };
 
+// Shutdown the requestor if timed out
         const timeout_callback = function () {
-            clearInterval(timer);
-            timer = undefined;
+
+            if (timer !== undefined) {
+                clearInterval(timer);
+                timer = undefined;
+            }
+
             timeout = undefined;
             limit = undefined;
             callback(undefined, "Timeout exceeded");
         };
 
+// Start the timer(s)
         try {
             timer = setInterval(tester, interval);
-            if (type_check ("number") (timeout)) {
+            if (type_check("number")(timeout)) {
                 limit = setTimeout(timeout_callback, timeout);
             }
         } catch (exception) {
@@ -112,7 +135,8 @@ const wait_requestor = function (callback) {
             return;
         }
 
-        return function () {
+// If user cancels, clear the timeout and interval timers
+        return function cancel() {
             if (limit !== undefined) {
                 clearTimeout(limit);
             }
@@ -139,13 +163,13 @@ const record_requestor = function (options = {}) {
             function (key) {
                 return [
                     key,
-                    function requestor (callback) {
-                        return pipe (
+                    function requestor(callback) {
+                        return pipe(
                             prop(key)
-                        ) (
-                            functional_if (
+                        )(
+                            functional_if(
                                 equals(undefined)
-                            ) (
+                            )(
 // When the input is missing a key, return {}
                                 constant_requestor(minimal_object())(callback),
 // Otherwise call the requestor
@@ -157,10 +181,52 @@ const record_requestor = function (options = {}) {
             }
         );
 
-        return parseq.parallel_object (
+        return parseq.parallel_object(
             options
-        ) (
+        )(
             Object.fromEntries(requestor_list)
+        );
+    };
+};
+
+// Process of sequence of Kleisli-type requestors in the form
+//      <a -> {fst: log, snd: b}>
+// Compatible with Kleisli_Type in StaticTypesBasic
+const kleisli_sequence_requestor = function (log_type) {
+    return function (options) {
+
+// Reformat initial input to be a pair
+        const map_initial_value_to_pair = function (initial_value) {
+            return {
+                fst: log_type.empty(),
+                snd: initial_value
+            };
+        };
+
+// Take result in form {fst, {fst, snd}} and concat fst's to return {fst, snd}
+        const map_result_to_pair = function ({fst, snd}) {
+            return {
+                fst: log_type.concat(fst)(snd.fst),
+                snd: snd.snd
+            };
+        };
+
+// Take each Klesli requestor and put in a pair with log passthrough
+        const map_to_record = function (requestor) {
+            return req_type.map(
+                map_result_to_pair
+            )(
+                record_requestor()({
+                    fst: unary_requestor(identity),
+                    snd: requestor
+                })
+            );
+        };
+
+        return pipeN(
+            array_map(map_to_record),
+            parseq.sequence(options),
+            req_type.contramap(map_initial_value_to_pair)
         );
     };
 };
@@ -169,7 +235,7 @@ const record_requestor = function (options = {}) {
 // callback but ignores the normal initial_value parameter
 const preloaded_requestor = function (requestor) {
     return function (input) {
-        return function derived_requestor(callback) {
+        return function preload_requestor(callback) {
             return function (ignore) {
                 return requestor(callback)(input);
             };
@@ -182,23 +248,17 @@ const preloaded_requestor = function (requestor) {
 const applied_requestor = function (processor) {
     return function (options = {}) {
         return function (requestor) {
-            return function applied_requestor (final_callback) {
+            return function applied_requestor(final_callback) {
                 return function (input_list) {
 
                     if (!Array.isArray(input_list)) {
                         final_callback(undefined, "Input is not an array");
                     }
 
-                    const requestor_list = array_map(
-                        preloaded_requestor(requestor)
-                    )(
-                        input_list
-                    );
-
                     return processor(
                         options
                     )(
-                        requestor_list
+                        array_map(preloaded_requestor(requestor))(input_list)
                     )(
                         final_callback
                     )(
@@ -245,9 +305,10 @@ const applied_parallel_object_requestor = function (options = {}) {
     };
 };
 
+// Continue running a requestor as long as it passes a predicate function
 const repeat_requestor = function (repeat_predicate) {
     return function (requestor) {
-        return function repeater_requestor (callback) {
+        return function repeater_requestor(callback) {
             return function (initial_value) {
 
                 const repeater_callback = function (value, reason) {
@@ -257,8 +318,8 @@ const repeat_requestor = function (repeat_predicate) {
                     }
 
 // If the returned value passes the predicate function, re-run the requestor
-                    if (repeat_predicate (value) === true) {
-                        requestor (repeater_callback) (value);
+                    if (repeat_predicate(value) === true) {
+                        requestor(repeater_callback)(value);
 
 // The returned value failed the predicate - no more repeats, return the value
                     } else {
@@ -266,9 +327,9 @@ const repeat_requestor = function (repeat_predicate) {
                     }
                 };
 
-                // Must pass the repeater test initially
-                if (repeat_predicate (initial_value) === true) {
-                    requestor (repeater_callback) (initial_value);
+// Must pass the repeater test initially
+                if (repeat_predicate(initial_value) === true) {
+                    requestor(repeater_callback)(initial_value);
                 } else {
                     callback(initial_value);
                 }
@@ -277,10 +338,12 @@ const repeat_requestor = function (repeat_predicate) {
     };
 };
 
+// Produce a requestor that repeats a requestor, aggregating return values,
+// as long as the aggregate value passes a continuer function
 const chained_requestor = function ({continuer, aggregator}) {
 
     if (continuer === undefined) {
-        throw "Continuer function missiing";
+        throw "Continuer function missing";
     }
 
     if (aggregator === undefined) {
@@ -288,7 +351,7 @@ const chained_requestor = function ({continuer, aggregator}) {
     }
 
     return function (requestor) {
-        return function chained_requestor (callback) {
+        return function chained_requestor(callback) {
             return function (initial_value) {
                 const chained_callback = function (value, reason) {
                     if (value === undefined) {
@@ -296,24 +359,26 @@ const chained_requestor = function ({continuer, aggregator}) {
                         return;
                     }
 
-                    const result = aggregator (initial_value) (value);
+// Aggregate the values
+                    const result = aggregator(initial_value)(value);
 
+// If result passes continuer, spawn another chained_requestor, otherwise return
                     const f = (
                         (continuer(result))
-                        ? chained_requestor (
+                        ? chained_requestor(
                             {continuer, aggregator}
-                        ) (
+                        )(
                             requestor
-                        ) (
+                        )(
                             callback
                         )
                         : callback
                     );
 
-                    f (result);
+                    f(result);
                 };
 
-                return requestor (chained_callback) (initial_value);
+                return requestor(chained_callback)(initial_value);
             };
         };
     };
@@ -329,6 +394,7 @@ export {
     constant_requestor,
     promise_requestor,
     functional_callback,
+    kleisli_sequence_requestor,
     repeat_requestor,
     record_requestor,
     wait_requestor
