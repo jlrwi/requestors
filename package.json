@@ -1,16 +1,19 @@
 {
   "name": "@jlrwi/requestors",
-  "version": "2.0.0",
-  "description": "Assorted Parseq-style requestors",
+  "version": "3.0.0",
+  "description": "A collection of curried-parseq requestors and tools",
   "main": "index.js",
+  "files": [
+    "/src"
+  ],
   "dependencies": {
-    "@jlrwi/combinators": "file:../combinators",
-    "@jlrwi/esfunctions": "file:../esfunctions",
-    "@jlrwi/parseq": "file:../parseq",
-    "@jlrwi/requestor_type": "file:../requestor_type"
+    "@jlrwi/combinators": "github:jlrwi/combinators",
+    "@jlrwi/curried-parseq": "github:jlrwi/curried-parseq",
+    "@jlrwi/esfunctions": "github:jlrwi/esfunctions"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "stage": "extract-doc ./src/requestors.js README.md & extract-min ./src/requestors.js index.js"
   },
   "author": "Jonathan Reimer",
   "license": "ISC",

@@ -2,6 +2,12 @@
     fudge, node
 */
 
+//MD # Requestors/p
+//MD A collection of
+//MD [curried-parseq](https://github.com/jlrwi/curried-parseq)-style
+//MD requestor factories, requestors, and tools./p
+//MD /p
+
 import {
     pipe
 } from "@jlrwi/combinators";
@@ -28,6 +34,13 @@ const preloaded_requestor = function (requestor) {
         };
     };
 };
+
+//MD ## Applied requestor factories/p
+//MD Each of these factories corresponds to a curried-parseq factory, except
+//MD that instead of applying a single value to a list (or object) of
+//MD requestors, each value in a list (or object) is applied to a single
+//MD requestor./p
+//MD /p
 
 // Take one of the original (curried) factories and return the applied version
 // Produces: <a -> b> -> [a] -> [<a -> b>] -> [b]
@@ -56,11 +69,41 @@ const applied_requestor = function (processor) {
     };
 };
 
+//MD applied_fallback({/p
+//MD     time_limit/p
+//MD })(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
 const applied_fallback = applied_requestor(parseq.fallback);
 
+//MD applied_parallel({/p
+//MD     time_limit,/p
+//MD     time_option,/p
+//MD     throttle/p
+//MD })(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
 const applied_parallel = applied_requestor(parseq.parallel);
 
+//MD applied_race({/p
+//MD     time_limit,/p
+//MD     throttle/p
+//MD })(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
 const applied_race = applied_requestor(parseq.race);
+
+//MD applied_parallel_object({/p
+//MD     time_limit,/p
+//MD     time_option,/p
+//MD     throttle/p
+//MD })(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
 
 // Result: <a -> b> -> {a} -> {<a -> b>} -> {b}
 const applied_parallel_object = function (options = {}) {
@@ -91,6 +134,22 @@ const applied_parallel_object = function (options = {}) {
         };
     };
 };
+
+//MD ## Repetitive requestor factories/p
+//MD /p
+
+//MD ### Chained requestor/p
+//MD Repetitively run a requestor, aggregating its return values with a unary
+//MD aggregator function, as long as the aggregate value passes a unary
+//MD continuation predicate function./p
+//MD /p
+//MD chained_requestor({/p
+//MD     continuer,/p
+//MD     aggregator/p
+//MD })(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
 
 const chained_requestor = function ({continuer, aggregator}) {
 
@@ -146,6 +205,17 @@ const chained_requestor = function ({continuer, aggregator}) {
     };
 };
 
+//MD ### Repeat requestor/p
+//MD Repetitively run a requestor as long as the return value passes a unary
+//MD predicate function./p
+//MD /p
+//MD repeat_requestor(/p
+//MD     predicate/p
+//MD )(/p
+//MD     requestor/p
+//MD )/p
+//MD /p
+
 const repeat_requestor = function (repeat_predicate) {
     return function (requestor) {
         return function repeater_requestor(callback) {
@@ -191,6 +261,18 @@ const repeat_requestor = function (repeat_predicate) {
     };
 };
 
+//MD ## Other requestor factories/p
+//MD /p
+
+//MD ### Constant requestor/p
+//MD Make a requestor that always returns the same value. This can be useful for
+//MD inserting a value into a sequence of requestors./p
+//MD /p
+//MD constant_requestor(/p
+//MD     return_value/p
+//MD )/p
+//MD /p
+
 const constant_requestor = function (constant_value) {
     return function constant_requestor(callback) {
         return function (ignore) {
@@ -199,6 +281,13 @@ const constant_requestor = function (constant_value) {
     };
 };
 
+//MD ### Promise requestor/p
+//MD Convert a Javascript promise to a requestor/p
+//MD /p
+//MD promise_requestor(/p
+//MD     promise/p
+//MD )/p
+//MD /p
 const promise_requestor = function (promise_object) {
     return function promise_requestor(callback) {
         const on_err = function (err) {
@@ -211,6 +300,13 @@ const promise_requestor = function (promise_object) {
     };
 };
 
+//MD ### Unary requestor/p
+//MD Turn a non-blocking unary function into a requestor./p
+//MD /p
+//MD unary_requestor(/p
+//MD     function/p
+//MD )/p
+//MD /p
 const unary_requestor = function (unary_fx) {
     return function unary_requestor(callback) {
         return function (value) {
@@ -223,6 +319,26 @@ const unary_requestor = function (unary_fx) {
     };
 };
 
+//MD ### Wait requestor/p
+//MD Poll a predicate function at a specified interval until it returns true./p
+//MD /p
+//MD wait_requestor({/p
+//MD     predicate,/p
+//MD     args,/p
+//MD     interval,/p
+//MD     timeout/p
+//MD })(/p
+//MD     value/p
+//MD )/p
+//MD /p
+//MD Parameters:/p
+//MD - predicate: a unary function/p
+//MD - args: arguments to apply to predicate (optional)/p
+//MD - interval: the interval at which to poll the predicate/p
+//MD - timeout: elapsed time at which to stop polling and fail (optional)/p
+//MD - value: the value to return or function to invoke when the predicate
+//MD succeeds/p
+//MD /p
 const wait_requestor = function ({predicate, args, interval, timeout}) {
 
     if (!type_check("function")(predicate)) {
@@ -310,6 +426,19 @@ const wait_requestor = function ({predicate, args, interval, timeout}) {
     };
 };
 
+//MD ### Indexed requestor/p
+//MD Send each requestor in an array of requestors the corresponding value from
+//MD the same index in the input array, running all the requestors in
+//MD parallel./p
+//MD /p
+//MD indexed_requestor({/p
+//MD     time_limit,/p
+//MD     time_option,/p
+//MD     throttle/p
+//MD })(/p
+//MD     requestors_array/p
+//MD )/p
+//MD /p
 const indexed_requestor = function (options = {}) {
     return function (requestors) {
 
@@ -344,6 +473,19 @@ const indexed_requestor = function (options = {}) {
     };
 };
 
+//MD ### Record requestor/p
+//MD Send each requestor in an object of requestors the corresponding
+//MD property value from the input object, running all the requestors in
+//MD parallel./p
+//MD /p
+//MD record_requestor({/p
+//MD     time_limit,/p
+//MD     time_option,/p
+//MD     throttle/p
+//MD })(/p
+//MD     requestors_object/p
+//MD )/p
+//MD /p
 const record_requestor = function (options = {}) {
     return function (requestors) {
 
@@ -384,6 +526,20 @@ const record_requestor = function (options = {}) {
     };
 };
 
+//MD ## Tools/p
+//MD /p
+
+//MD ### Functional callback/p
+//MD Create a requestor callback from functions to be invoked in the failure or
+//MD success cases. The fail case will be called with the failure reason, while
+//MD the success case will be called with the returned value./p
+//MD /p
+//MD functional_callback(/p
+//MD     failure_function/p
+//MD )(/p
+//MD     success_function/p
+//MD )/p
+//MD /p
 // Reversed parameter order in 2.0.0
 const functional_callback = function (on_fail) {
     return function (on_success) {
