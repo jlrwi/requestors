@@ -15,6 +15,10 @@ import {
     functional_if,
     equals
 } from "@jlrwi/esfunctions";
+import {
+    set_timeout,
+    set_interval
+} from "@jlrwi/functional-timers";
 import parseq from "@jlrwi/curried-parseq";
 
 // Take a requestor and input value, and return a requestor that takes a
@@ -235,8 +239,8 @@ const wait_requestor = function ({predicate, args, interval, timeout}) {
 
     return function (callback) {
         return function (value) {
-            let timer;
-            let limit;
+            let cancel_timer;
+            let cancel_limit;
 
 // Can't return an undefined value from a requestor - use a timestamp
             if (value === undefined) {
@@ -254,14 +258,12 @@ const wait_requestor = function ({predicate, args, interval, timeout}) {
                 if (result === true) {
 
 // Shut down any timeout timer
-                    if (limit !== undefined) {
-                        clearTimeout(limit);
-                        limit = undefined;
+                    if (cancel_limit !== undefined) {
+                        cancel_limit();
                     }
 
 // Shut down the interval timer
-                    clearInterval(timer);
-                    timer = undefined;
+                    cancel_timer();
 
 // Return the value to the callback
                     callback(
@@ -275,21 +277,19 @@ const wait_requestor = function ({predicate, args, interval, timeout}) {
 // Shutdown the requestor if timed out
             const timeout_callback = function () {
 
-                if (timer !== undefined) {
-                    clearInterval(timer);
-                    timer = undefined;
+                if (cancel_timer !== undefined) {
+                    cancel_timer();
                 }
 
-                timeout = undefined;
-                limit = undefined;
                 callback(undefined, "Timeout exceeded");
             };
 
 // Start the timer(s)
             try {
-                timer = setInterval(tester, interval);
+                cancel_timer = set_interval(interval)(tester);
+
                 if (type_check("number")(timeout)) {
-                    limit = setTimeout(timeout_callback, timeout);
+                    cancel_limit = set_timeout(timeout)(timeout_callback);
                 }
             } catch (exception) {
                 callback(undefined, exception.message);
@@ -298,12 +298,12 @@ const wait_requestor = function ({predicate, args, interval, timeout}) {
 
 // If user cancels, clear the timeout and interval timers
             return function cancel() {
-                if (limit !== undefined) {
-                    clearTimeout(limit);
+                if (cancel_limit !== undefined) {
+                    cancel_limit();
                 }
 
-                if (timeout !== undefined) {
-                    clearInterval(timer);
+                if (cancel_timer !== undefined) {
+                    cancel_timer();
                 }
             };
         };

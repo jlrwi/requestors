@@ -9,7 +9,8 @@
   "dependencies": {
     "@jlrwi/combinators": "github:jlrwi/combinators",
     "@jlrwi/curried-parseq": "github:jlrwi/curried-parseq",
-    "@jlrwi/esfunctions": "github:jlrwi/esfunctions"
+    "@jlrwi/esfunctions": "github:jlrwi/esfunctions",
+    "@jlrwi/functional-timers": "github:jlrwi/functional-timers"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
