@@ -1,11 +1,11 @@
 {
   "name": "@jlrwi/requestors",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "A collection of curried-parseq requestors and tools",
   "main": "index.js",
-  "files": [
-    "/src"
-  ],
+  "homepage": "https://github.com/jlrwi/requestors",
+  "repository": "github:jlrwi/requestors",
+  "files": [],
   "dependencies": {
     "@jlrwi/combinators": "github:jlrwi/combinators",
     "@jlrwi/curried-parseq": "github:jlrwi/curried-parseq",

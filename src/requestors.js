@@ -525,6 +525,29 @@ const record_requestor = function (options = {}) {
     };
 };
 
+//MD ### Conditional requestor/p
+//MD Take a predicate and return a requestor that will test the value passed
+//MD into it.
+//MD If the predicate returns truthy, send the value to the callback.
+//MD If the predicate fails, call the callback with an error message./p
+//MD /p
+//MD     conditional_requestor(predicate)/p
+//MD /p
+const conditional_requestor = function (predicate) {
+    return function conditional_requestor(callback) {
+        return function (value) {
+            if (predicate(value)) {
+                callback(value);
+            } else {
+                callback(
+                    undefined,
+                    "conditional_requestor: value failed predicate\n" + value
+                );
+            }
+        };
+    };
+};
+
 //MD ## Tools/p
 //MD /p
 
@@ -558,6 +581,7 @@ export {
     applied_fallback,
     applied_parallel_object,
     chained_requestor,
+    conditional_requestor,
     constant_requestor,
     indexed_requestor,
     promise_requestor,
