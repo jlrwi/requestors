@@ -384,6 +384,21 @@ const record_requestor = function (options = {}) {
     };
 };
 
+const conditional_requestor = function (predicate) {
+    return function conditional_requestor(callback) {
+        return function (value) {
+            if (predicate(value)) {
+                callback(value);
+            } else {
+                callback(
+                    undefined,
+                    "conditional_requestor: value failed predicate\n" + value
+                );
+            }
+        };
+    };
+};
+
 // Reversed parameter order in 2.0.0
 const functional_callback = function (on_fail) {
     return function (on_success) {
@@ -403,6 +418,7 @@ export {
     applied_fallback,
     applied_parallel_object,
     chained_requestor,
+    conditional_requestor,
     constant_requestor,
     indexed_requestor,
     promise_requestor,
