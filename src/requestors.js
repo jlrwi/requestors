@@ -526,24 +526,30 @@ const record_requestor = function (options = {}) {
 };
 
 //MD ### Conditional requestor/p
-//MD Take a predicate and return a requestor that will test the value passed
-//MD into it.
+//MD Take an error message, then a predicate and return a requestor that will
+//MD test the value passed into it.
 //MD If the predicate returns truthy, send the value to the callback.
-//MD If the predicate fails, call the callback with an error message./p
+//MD If the predicate fails, call the callback with the error message./p
 //MD /p
-//MD     conditional_requestor(predicate)/p
+//MD     conditional_requestor(error_message)(predicate)/p
 //MD /p
-const conditional_requestor = function (predicate) {
-    return function conditional_requestor(callback) {
-        return function (value) {
-            if (predicate(value)) {
-                callback(value);
-            } else {
-                callback(
-                    undefined,
-                    "conditional_requestor: value failed predicate\n" + value
-                );
-            }
+const conditional_requestor = function (error_message = "") {
+    return function (predicate) {
+        return function conditional_requestor(callback) {
+            return function (value) {
+                if (predicate(value)) {
+                    callback(value);
+                } else {
+                    callback(
+                        undefined,
+                        (
+                            (error_message.length > 0)
+                            ? error_message
+                            : "conditional_requestor: value failed predicate"
+                        )
+                    );
+                }
+            };
         };
     };
 };

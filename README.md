@@ -119,9 +119,9 @@ Send each requestor in an object of requestors the corresponding property value 
     )   
    
 ### Conditional requestor   
-Take a predicate and return a requestor that will test the value passed into it. If the predicate returns truthy, send the value to the callback. If the predicate fails, call the callback with an error message.   
+Take an error message, then a predicate and return a requestor that will test the value passed into it. If the predicate returns truthy, send the value to the callback. If the predicate fails, call the callback with the error message.   
    
-    conditional_requestor(predicate)   
+    conditional_requestor(error_message)(predicate)   
    
 ## Tools   
    

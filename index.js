@@ -384,17 +384,23 @@ const record_requestor = function (options = {}) {
     };
 };
 
-const conditional_requestor = function (predicate) {
-    return function conditional_requestor(callback) {
-        return function (value) {
-            if (predicate(value)) {
-                callback(value);
-            } else {
-                callback(
-                    undefined,
-                    "conditional_requestor: value failed predicate\n" + value
-                );
-            }
+const conditional_requestor = function (error_message = "") {
+    return function (predicate) {
+        return function conditional_requestor(callback) {
+            return function (value) {
+                if (predicate(value)) {
+                    callback(value);
+                } else {
+                    callback(
+                        undefined,
+                        (
+                            (error_message.length > 0)
+                            ? error_message
+                            : "conditional_requestor: value failed predicate"
+                        )
+                    );
+                }
+            };
         };
     };
 };
