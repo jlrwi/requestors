@@ -1,6 +1,6 @@
 {
   "name": "@jlrwi/requestors",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "A collection of curried-parseq requestors and tools",
   "main": "index.js",
   "homepage": "https://github.com/jlrwi/requestors",

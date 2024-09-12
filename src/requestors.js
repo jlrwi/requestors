@@ -298,7 +298,7 @@ const promise_requestor = function (promise_object) {
         };
 
         return function (ignore) {
-            promise_object.then(callback).catch(on_err);
+            promise_object().then(callback).catch(on_err);
         };
     };
 };
