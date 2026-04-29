@@ -1,9 +1,10 @@
 /*jslint
-    fudge, node
+    unordered, node
 */
 
 import {
-    pipe
+    pipe,
+    not
 } from "@jlrwi/combinators";
 import {
     is_object,
@@ -19,7 +20,7 @@ import {
     set_timeout,
     set_interval
 } from "@jlrwi/functional-timers";
-import parseq from "@jlrwi/curried-parseq";
+import pronto from "@jlrwi/curried-pronto";
 
 // Take a requestor and input value, and return a requestor that takes a
 // callback but ignores the normal initial_value parameter
@@ -60,11 +61,11 @@ const applied_requestor = function (processor) {
     };
 };
 
-const applied_fallback = applied_requestor(parseq.fallback);
+const applied_fallback = applied_requestor(pronto.fallback);
 
-const applied_parallel = applied_requestor(parseq.parallel);
+const applied_parallel = applied_requestor(pronto.parallel);
 
-const applied_race = applied_requestor(parseq.race);
+const applied_race = applied_requestor(pronto.race);
 
 // Result: <a -> b> -> {a} -> {<a -> b>} -> {b}
 const applied_parallel_object = function (options = {}) {
@@ -82,7 +83,7 @@ const applied_parallel_object = function (options = {}) {
                     input_object
                 );
 
-                return parseq.parallel_object(
+                return pronto.parallel_object(
                     options
                 )(
                     requestor_obj
@@ -102,8 +103,16 @@ const chained_requestor = function ({continuer, aggregator}) {
         throw "Continuer function missing";
     }
 
+    if (not(type_check("function")(continuer))) {
+        throw "Invalid Continuer function";
+    }
+
     if (aggregator === undefined) {
         throw "Aggregator function missing";
+    }
+
+    if (not(type_check("function")(aggregator))) {
+        throw "Invalid Aggregator function";
     }
 
     return function (requestor) {
@@ -336,7 +345,7 @@ const indexed_requestor = function (options = {}) {
             };
         };
 
-        return parseq.parallel(
+        return pronto.parallel(
             options
         )(
             requestors.map(index_mapper)
@@ -376,7 +385,7 @@ const record_requestor = function (options = {}) {
             ];
         };
 
-        return parseq.parallel_object(
+        return pronto.parallel_object(
             options
         )(
             Object.fromEntries(Object.entries(requestors).map(property_mapper))

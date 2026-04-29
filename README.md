@@ -1,8 +1,9 @@
 # Requestors   
-A collection of [curried-parseq](https://github.com/jlrwi/curried-parseq) requestor factories, requestors, and tools.   
+THIS PROJECT HAS BEEN SUPERSEDED BY [Requestor-Factories](https://github.com/jlrwi/requestor-factories)   
+A collection of [curried-pronto](https://github.com/jlrwi/curried-pronto) requestor factories, requestors, and tools.   
    
 ## Applied requestor factories   
-Each of these factories corresponds to a curried-parseq factory, except that instead of applying a single value to a list (or object) of requestors, each value in a list (or object) is applied to a single requestor.   
+Each of these factories corresponds to a curried-pronto factory, except that instead of applying a single value to a list (or object) of requestors, each value in a list (or object) is applied to a single requestor.   
    
     applied_fallback({   
         time_limit   

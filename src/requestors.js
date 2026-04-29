@@ -1,14 +1,17 @@
 /*jslint
-    fudge, node
+    unordered, node
 */
 
 //MD # Requestors/p
-//MD A collection of [curried-parseq](https://github.com/jlrwi/curried-parseq)
+//MD THIS PROJECT HAS BEEN SUPERSEDED BY
+//MD [Requestor-Factories](https://github.com/jlrwi/requestor-factories)/p
+//MD A collection of [curried-pronto](https://github.com/jlrwi/curried-pronto)
 //MD requestor factories, requestors, and tools./p
 //MD /p
 
 import {
-    pipe
+    pipe,
+    not
 } from "@jlrwi/combinators";
 import {
     is_object,
@@ -24,7 +27,7 @@ import {
     set_timeout,
     set_interval
 } from "@jlrwi/functional-timers";
-import parseq from "@jlrwi/curried-parseq";
+import pronto from "@jlrwi/curried-pronto";
 
 // Take a requestor and input value, and return a requestor that takes a
 // callback but ignores the normal initial_value parameter
@@ -39,7 +42,7 @@ const preloaded_requestor = function (requestor) {
 };
 
 //MD ## Applied requestor factories/p
-//MD Each of these factories corresponds to a curried-parseq factory, except
+//MD Each of these factories corresponds to a curried-pronto factory, except
 //MD that instead of applying a single value to a list (or object) of
 //MD requestors, each value in a list (or object) is applied to a single
 //MD requestor./p
@@ -78,7 +81,7 @@ const applied_requestor = function (processor) {
 //MD         requestor/p
 //MD     )/p
 //MD /p
-const applied_fallback = applied_requestor(parseq.fallback);
+const applied_fallback = applied_requestor(pronto.fallback);
 
 //MD     applied_parallel({/p
 //MD         time_limit,/p
@@ -88,7 +91,7 @@ const applied_fallback = applied_requestor(parseq.fallback);
 //MD         requestor/p
 //MD     )/p
 //MD /p
-const applied_parallel = applied_requestor(parseq.parallel);
+const applied_parallel = applied_requestor(pronto.parallel);
 
 //MD     applied_race({/p
 //MD         time_limit,/p
@@ -97,7 +100,7 @@ const applied_parallel = applied_requestor(parseq.parallel);
 //MD         requestor/p
 //MD     )/p
 //MD /p
-const applied_race = applied_requestor(parseq.race);
+const applied_race = applied_requestor(pronto.race);
 
 //MD     applied_parallel_object({/p
 //MD         time_limit,/p
@@ -124,7 +127,7 @@ const applied_parallel_object = function (options = {}) {
                     input_object
                 );
 
-                return parseq.parallel_object(
+                return pronto.parallel_object(
                     options
                 )(
                     requestor_obj
@@ -160,8 +163,16 @@ const chained_requestor = function ({continuer, aggregator}) {
         throw "Continuer function missing";
     }
 
+    if (not(type_check("function")(continuer))) {
+        throw "Invalid Continuer function";
+    }
+
     if (aggregator === undefined) {
         throw "Aggregator function missing";
+    }
+
+    if (not(type_check("function")(aggregator))) {
+        throw "Invalid Aggregator function";
     }
 
     return function (requestor) {
@@ -464,7 +475,7 @@ const indexed_requestor = function (options = {}) {
             };
         };
 
-        return parseq.parallel(
+        return pronto.parallel(
             options
         )(
             requestors.map(index_mapper)
@@ -517,7 +528,7 @@ const record_requestor = function (options = {}) {
             ];
         };
 
-        return parseq.parallel_object(
+        return pronto.parallel_object(
             options
         )(
             Object.fromEntries(Object.entries(requestors).map(property_mapper))

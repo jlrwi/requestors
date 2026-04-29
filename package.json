@@ -8,7 +8,7 @@
   "files": [],
   "dependencies": {
     "@jlrwi/combinators": "github:jlrwi/combinators",
-    "@jlrwi/curried-parseq": "github:jlrwi/curried-parseq",
+    "@jlrwi/curried-pronto": "github:jlrwi/curried-pronto",
     "@jlrwi/esfunctions": "github:jlrwi/esfunctions",
     "@jlrwi/functional-timers": "github:jlrwi/functional-timers"
   },
